@@ -139,7 +139,7 @@ export default function DashboardChatPage() {
       {/* Conversation area */}
       <div className={cn("mx-auto w-full max-w-3xl", inConversation ? "pt-4" : "")}>
         {!inConversation ? (
-          <div className="grid min-h-[calc(100dvh-3rem)] place-items-center">
+          <div className="grid min-h-[calc(60dvh)] place-items-center">
             <div className="w-full max-w-2xl px-4">
               <HeroHeading />
             </div>
