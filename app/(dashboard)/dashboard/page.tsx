@@ -315,9 +315,9 @@ function Composer(props: {
               onCheckedChange={(v) => setWebSearch(Boolean(v))}
             >
               {webSearch ? <>
-                <span className="text-sm">Enable Web Search</span>
-              </> : <>
                 <span className="text-sm">Disable Web Search</span>
+              </> : <>
+                <span className="text-sm">Enable Web Search</span>
               </>}
             </DropdownMenuCheckboxItem>
           </DropdownMenuContent>
