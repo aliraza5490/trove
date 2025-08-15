@@ -277,7 +277,7 @@ function Composer(props: {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
-          className="max-h-56 min-h-14 flex-1 resize-none bg-transparent"
+          className="max-h-32 min-h-14 flex-1 resize-none bg-transparent"
           aria-label="Chat input"
         />
         
