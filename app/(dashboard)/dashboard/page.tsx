@@ -306,20 +306,17 @@ function Composer(props: {
               <Wrench className="size-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="start" className="w-56">
             <DropdownMenuItem  onSelect={(e) => { e.preventDefault(); onUploadClick(); }}>
               <Upload className="size-4" /> Upload Document
             </DropdownMenuItem>
             <DropdownMenuCheckboxItem
-              className="px-2"
               checked={webSearch}
               onCheckedChange={(v) => setWebSearch(Boolean(v))}
             >
               {webSearch ? <>
-                <Check className="size-4" />
                 <span className="text-sm">Enable Web Search</span>
               </> : <>
-                <X className="size-4" />
                 <span className="text-sm">Disable Web Search</span>
               </>}
             </DropdownMenuCheckboxItem>
