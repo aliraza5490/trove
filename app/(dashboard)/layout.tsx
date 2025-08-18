@@ -1,5 +1,3 @@
-import Image from 'next/image';
-import Link from 'next/link';
 import NewConversation from '@/app/(dashboard)/dashboard/components/NewConversation';
 import RecentChats from '@/app/(dashboard)/dashboard/components/RecentChats';
 import {
@@ -18,19 +16,31 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { NavUser } from '@/app/(dashboard)/dashboard/components/NavUser';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { auth } from '@/auth';
+import Logo from "@/components/logo";
+import { redirect } from "next/navigation";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await auth();
+  const user = session?.user;
+
+  if (!user) {
+    return redirect('/login');
+  }
+
+
+  const avatar = '/images/max.jpg';
+
   return (
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <Link href="/dashboard" className="flex items-center px-2 w-full">
-            <Image src="/logo-cropped.png" alt="Trove" width={120} height={120} className="mx-auto block my-3" />
-          </Link>
+          <Logo link="/dashboard" />
           <NewConversation />
         </SidebarHeader>
 
@@ -47,7 +57,7 @@ export default function DashboardLayout({
 
         <SidebarSeparator />
         <SidebarFooter>
-          <NavUser user={{ name: 'John Doe', email: 'john@example.com', avatar: '/images/max.jpg' }} />
+          <NavUser user={{ name: user?.name ?? 'User', email: (user as any)?.email ?? 'user@example.com', avatar }} />
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
@@ -56,6 +66,9 @@ export default function DashboardLayout({
         <div className="flex h-12 items-center gap-2 border-b px-3">
           <SidebarTrigger />
           <div className="text-sm text-muted-foreground">Dashboard</div>
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
+          </div>
         </div>
         <div className="min-h-[calc(100dvh-3rem)]">{children}</div>
       </SidebarInset>
