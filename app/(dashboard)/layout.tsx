@@ -40,7 +40,7 @@ export default async function DashboardLayout({
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <Logo link="/dashboard" />
+          <Logo link="/dashboard" className="justify-start px-2" />
           <NewConversation />
         </SidebarHeader>
 

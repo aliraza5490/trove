@@ -131,7 +131,7 @@ export default function ChatClient() {
     <div className="relative min-h-full">
       <div className={cn("mx-auto w-full max-w-3xl", inConversation ? "pt-4" : "")}>
         {!inConversation ? (
-          <div className="grid min-h-[calc(60dvh)] place-items-center">
+          <div className="flex flex-col items-center justify-center min-h-[calc(60dvh)] pb-40">
             <div className="w-full max-w-2xl px-4">
               <HeroHeading />
             </div>
@@ -260,58 +260,59 @@ function Composer(props: {
         </div>
       )}
 
-      <div className="relative flex items-end gap-2">
-        <Textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder={placeholder}
-          className="max-h-32 min-h-14 flex-1 resize-none bg-transparent"
-          aria-label="Chat input"
-        />
-        
+      <Textarea
+        ref={textareaRef}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={onKeyDown}
+        placeholder={placeholder}
+        className="max-h-32 min-h-14 w-full resize-none border-0 bg-transparent px-2 py-1.5 text-base shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-0 md:text-sm"
+        aria-label="Chat input"
+      />
+
+      <div className="mt-2 flex items-center justify-between px-1">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Attach"
+            onClick={onUploadClick}
+            className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-md hover:bg-accent"
+          >
+            <Paperclip className="size-5" />
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="shrink-0">
+                <Wrench className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuItem  onSelect={(e) => { e.preventDefault(); onUploadClick(); }}>
+                <Upload className="size-4" /> Upload Document
+              </DropdownMenuItem>
+              <DropdownMenuCheckboxItem
+                checked={webSearch}
+                onCheckedChange={(v) => setWebSearch(Boolean(v))}
+              >
+                {webSearch ? <>
+                  <span className="text-sm">Disable Web Search</span>
+                </> : <>
+                  <span className="text-sm">Enable Web Search</span>
+                </>}
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
         <Button
           onClick={onSend}
           disabled={!input.trim() || isStreaming}
-          className="shrink-0 absolute bottom-2 right-2"
+          size="icon"
+          className="shrink-0 rounded-lg"
         >
           <Send className="size-4" />
           <span className="sr-only">Send</span>
         </Button>
-      </div>
-
-      <div className="mt-2 flex items-center gap-2 px-1">
-        <button
-          type="button"
-          aria-label="Attach"
-          onClick={onUploadClick}
-          className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-md hover:bg-accent"
-        >
-          <Paperclip className="size-5" />
-        </button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="shrink-0">
-              <Wrench className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuItem  onSelect={(e) => { e.preventDefault(); onUploadClick(); }}>
-              <Upload className="size-4" /> Upload Document
-            </DropdownMenuItem>
-            <DropdownMenuCheckboxItem
-              checked={webSearch}
-              onCheckedChange={(v) => setWebSearch(Boolean(v))}
-            >
-              {webSearch ? <>
-                <span className="text-sm">Disable Web Search</span>
-              </> : <>
-                <span className="text-sm">Enable Web Search</span>
-              </>}
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
       <div className="mt-2 text-[11px] text-muted-foreground flex items-center gap-2 px-1">
         <span className="inline-flex items-center gap-1">
