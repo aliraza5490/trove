@@ -39,8 +39,68 @@ function useAutoResizeTextarea<T extends HTMLTextAreaElement>() {
   return { ref, resize } as const;
 }
 
-export default function ChatClient() {
-  const [messages, setMessages] = useState<Message[]>([]);
+const MOCK_CHAT_HISTORY: Record<string, Message[]> = {
+  "1": [
+    {
+      id: "msg-1-1",
+      role: "user",
+      content: "What is the scope of the Trove project?",
+    },
+    {
+      id: "msg-1-2",
+      role: "assistant",
+      content: "The Trove project is a modern web application designed for document analysis, web search, and interactive chat. It features a responsive dashboard, a dark/light mode toggle, recent chats sidebar, and a rich document upload functionality.",
+    },
+  ],
+  "2": [
+    {
+      id: "msg-2-1",
+      role: "user",
+      content: "Can you summarize the design guidelines?",
+    },
+    {
+      id: "msg-2-2",
+      role: "assistant",
+      content: "Sure! The design guidelines emphasize premium aesthetics, HSL tailored dark themes, Outfit or Inter typography, responsive layouts, smooth micro-animations, and avoiding browser defaults or generic colors.",
+    },
+  ],
+  "3": [
+    {
+      id: "msg-3-1",
+      role: "user",
+      content: "What are the first steps for onboarding?",
+    },
+    {
+      id: "msg-3-2",
+      role: "assistant",
+      content: "Here is your onboarding checklist:\n1. Set up your local environment (.env file)\n2. Run Prisma migrations to initialize the database\n3. Start the development server using `pnpm dev`\n4. Register a new user at `/signup`",
+    },
+  ],
+  "4": [
+    {
+      id: "msg-4-1",
+      role: "user",
+      content: "Show me the latest sprint planning notes.",
+    },
+    {
+      id: "msg-4-2",
+      role: "assistant",
+      content: "The notes from the latest sprint include:\n- Implement the sidebar navigation and logo alignment.\n- Build the dynamic chat composer and stream responses.\n- Enhance the login/signup page UI.\n- Refactor recent chats page to share the main chat interface.",
+    },
+  ],
+};
+
+interface ChatClientProps {
+  chatId?: string;
+}
+
+export default function ChatClient({ chatId }: ChatClientProps = {}) {
+  const [messages, setMessages] = useState<Message[]>(() => {
+    if (chatId && MOCK_CHAT_HISTORY[chatId]) {
+      return MOCK_CHAT_HISTORY[chatId];
+    }
+    return [];
+  });
   const [input, setInput] = useState("");
   const [webSearch, setWebSearch] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
