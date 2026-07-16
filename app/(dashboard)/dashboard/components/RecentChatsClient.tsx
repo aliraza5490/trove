@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { renameChat as renameChatAction, deleteChat as deleteChatAction } from './actions';
 import { Pencil, Trash2, Check, X, MoreVertical } from 'lucide-react';
@@ -31,6 +31,11 @@ export default function RecentChatsClient({ initialChats }: { initialChats: Chat
   const router = useRouter();
   const pathname = usePathname();
   const [chats, setChats] = useState<Chat[]>(initialChats);
+
+  useEffect(() => {
+    setChats(initialChats);
+  }, [initialChats]);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
 
@@ -112,8 +117,8 @@ export default function RecentChatsClient({ initialChats }: { initialChats: Chat
               <>
                 <SidebarMenuButton asChild>
                   <Link href={`/dashboard/${c.id}`}>
-                    <span className="line-clamp-1">{c.title}</span>
-                    <span className="text-muted-foreground text-xs">{c.updatedAt}</span>
+                    <span className="line-clamp-1 flex-1">{c.title}</span>
+                    <span className="text-muted-foreground text-xs shrink-0">{c.updatedAt}</span>
                   </Link>
                 </SidebarMenuButton>
                 <DropdownMenu>
