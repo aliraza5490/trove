@@ -8,9 +8,8 @@ export default function NewConversation() {
 	const router = useRouter();
 
 	const handleNewChat = () => {
-		// TODO: Replace with API call to create a chat, then navigate to that chat.
-		const ts = Date.now();
-		router.push(`/dashboard?new=${ts}`);
+		router.push('/dashboard');
+		router.refresh();
 	};
 
 	return (

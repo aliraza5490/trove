@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { renameChat as renameChatAction, deleteChat as deleteChatAction } from './actions';
 import { Pencil, Trash2, Check, X, MoreVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -26,6 +28,8 @@ export type Chat = {
 };
 
 export default function RecentChatsClient({ initialChats }: { initialChats: Chat[] }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [chats, setChats] = useState<Chat[]>(initialChats);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
@@ -40,25 +44,40 @@ export default function RecentChatsClient({ initialChats }: { initialChats: Chat
     setDraftTitle('');
   };
 
-  const saveEdit = (id: string) => {
+  const saveEdit = async (id: string) => {
     const next = draftTitle.trim();
     if (!next) {
       toast.error('Title cannot be empty');
       return;
     }
-    setChats((prev) => prev.map((c) => (c.id === id ? { ...c, title: next } : c)));
-    setEditingId(null);
-    setDraftTitle('');
-    toast.success('Chat title updated');
+    try {
+      await renameChatAction(id, next);
+      setChats((prev) => prev.map((c) => (c.id === id ? { ...c, title: next } : c)));
+      setEditingId(null);
+      setDraftTitle('');
+      toast.success('Chat title updated');
+      router.refresh();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to rename chat');
+    }
   };
 
-  const deleteChat = (id: string) => {
+  const deleteChat = async (id: string) => {
     const target = chats.find((c) => c.id === id);
     if (!target) return;
     const ok = window.confirm(`Delete chat "${target.title}"?`);
     if (!ok) return;
-    setChats((prev) => prev.filter((c) => c.id !== id));
-    toast.success('Chat deleted');
+    try {
+      await deleteChatAction(id);
+      setChats((prev) => prev.filter((c) => c.id !== id));
+      toast.success('Chat deleted');
+      if (pathname === `/dashboard/${id}`) {
+        router.push('/dashboard');
+      }
+      router.refresh();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to delete chat');
+    }
   };
 
   return (

@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -26,6 +29,7 @@ type SelectedDoc = {
   name: string;
   size: number;
   type: string;
+  content: string;
 };
 
 function useAutoResizeTextarea<T extends HTMLTextAreaElement>() {
@@ -92,15 +96,12 @@ const MOCK_CHAT_HISTORY: Record<string, Message[]> = {
 
 interface ChatClientProps {
   chatId?: string;
+  initialMessages?: Message[];
 }
 
-export default function ChatClient({ chatId }: ChatClientProps = {}) {
-  const [messages, setMessages] = useState<Message[]>(() => {
-    if (chatId && MOCK_CHAT_HISTORY[chatId]) {
-      return MOCK_CHAT_HISTORY[chatId];
-    }
-    return [];
-  });
+export default function ChatClient({ chatId, initialMessages = [] }: ChatClientProps) {
+  const router = useRouter();
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [webSearch, setWebSearch] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -119,21 +120,15 @@ export default function ChatClient({ chatId }: ChatClientProps = {}) {
     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, isStreaming]);
 
-  const mockGenerate = useCallback(async (prompt: string) => {
-    const base = webSearch
-      ? `I searched the web and found some relevant info about: ${prompt}. `
-      : `Here's a response to: ${prompt}. `;
-    const filler =
-      "This is a simulated streaming reply to showcase the chat UI behavior. You can wire this up to your API later for real responses.";
-    const full = base + filler;
-    const chunks = full.split(/(\s+)/);
-    return chunks;
-  }, [webSearch]);
-
   const handleSend = useCallback(async () => {
     if (!input.trim() || isStreaming) return;
     const text = input.trim();
     setInput("");
+    
+    const attachments = selectedDocs.map(d => ({
+      name: d.name,
+      content: d.content
+    }));
     setSelectedDocs([]);
 
     const userMsg: Message = { id: crypto.randomUUID(), role: "user", content: text };
@@ -143,16 +138,61 @@ export default function ChatClient({ chatId }: ChatClientProps = {}) {
     setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
 
     setIsStreaming(true);
-    const chunks = await mockGenerate(text);
 
-    for (const chunk of chunks) {
-      await new Promise((r) => setTimeout(r, 30));
-      setMessages((prev) =>
-        prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + chunk } : m))
-      );
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chatId,
+          message: text,
+          webSearch,
+          attachments,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || response.statusText);
+      }
+
+      const newChatId = response.headers.get("x-chat-id");
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) {
+        throw new Error("Response body is not readable");
+      }
+
+      let done = false;
+      let assistantText = "";
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        if (value) {
+          const chunk = decoder.decode(value);
+          assistantText += chunk;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, content: assistantText } : m))
+          );
+        }
+      }
+
+      if (newChatId && newChatId !== chatId) {
+        router.push(`/dashboard/${newChatId}`);
+        router.refresh();
+      }
+    } catch (err: any) {
+      console.error("Failed to send message:", err);
+      toast.error(err.message || "Failed to generate AI response");
+      setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+    } finally {
+      setIsStreaming(false);
     }
-    setIsStreaming(false);
-  }, [input, isStreaming, mockGenerate]);
+  }, [input, isStreaming, chatId, webSearch, selectedDocs, router]);
 
   const handleUploadClick = useCallback(() => {
     fileInputRef.current?.click();
@@ -161,18 +201,37 @@ export default function ChatClient({ chatId }: ChatClientProps = {}) {
   const onFileSelected = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length) {
-      const mapped = files.map((f) => ({
-        id: crypto.randomUUID(),
-        name: f.name,
-        size: f.size,
-        type: f.type,
-      }));
-      setSelectedDocs((prev) => {
-        const existingKey = new Set(prev.map((d) => `${d.name}:${d.size}`));
-        const toAdd = mapped.filter((d) => !existingKey.has(`${d.name}:${d.size}`));
-        const next = [...prev, ...toAdd];
-        if (toAdd.length) toast.success(`Added ${toAdd.length} file${toAdd.length > 1 ? "s" : ""}`);
-        return next;
+      files.forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const content = event.target?.result as string;
+          setSelectedDocs((prev) => {
+            if (prev.some((d) => d.name === file.name && d.size === file.size)) return prev;
+            toast.success(`Attached ${file.name}`);
+            return [...prev, {
+              id: crypto.randomUUID(),
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              content: content || ""
+            }];
+          });
+        };
+        if (file.type.startsWith("text/") || file.name.endsWith(".md") || file.name.endsWith(".json") || file.name.endsWith(".csv") || file.name.endsWith(".txt")) {
+          reader.readAsText(file);
+        } else {
+          setSelectedDocs((prev) => {
+            if (prev.some((d) => d.name === file.name && d.size === file.size)) return prev;
+            toast.success(`Attached metadata for binary file: ${file.name}`);
+            return [...prev, {
+              id: crypto.randomUUID(),
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              content: `[Binary/Non-text File content omitted: ${file.name}]`
+            }];
+          });
+        }
       });
     }
     e.currentTarget.value = "";
@@ -417,7 +476,30 @@ function ChatBubble({ role, content }: { role: Message["role"]; content: string 
             : "bg-muted text-foreground rounded-bl-md"
         )}
       >
-        {content}
+        {isUser ? (
+          <div className="whitespace-pre-wrap">{content}</div>
+        ) : (
+          <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed
+              [&_a]:text-primary-600 [&_a]:underline hover:[&_a]:text-primary-500
+              [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:my-2
+              [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:my-2
+              [&_p]:my-1.5 [&_p]:first:mt-0 [&_p]:last:mb-0
+              [&_code]:bg-accent/80 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono
+              [&_pre]:bg-black/90 [&_pre]:text-white [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:my-2 [&_pre]:overflow-x-auto
+              [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-white
+              [&_h1]:text-lg [&_h1]:font-bold [&_h1]:my-2
+              [&_h2]:text-base [&_h2]:font-bold [&_h2]:my-2
+              [&_h3]:text-sm [&_h3]:font-bold [&_h3]:my-1.5
+              [&_blockquote]:border-l-4 [&_blockquote]:border-primary/50 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:my-2
+              [&_table]:w-full [&_table]:border-collapse [&_table]:my-3
+              [&_th]:border [&_th]:border-border [&_th]:p-1.5 [&_th]:bg-accent [&_th]:font-semibold
+              [&_td]:border [&_td]:border-border [&_td]:p-1.5"
+          >
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {content}
+            </ReactMarkdown>
+          </div>
+        )}
       </div>
       {isUser && (
         <Avatar>
