@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -64,120 +65,48 @@ export default async function Home() {
         {/* Stable, low-risk gradient background */}
         <div className="absolute inset-x-0 top-0 -z-10 h-[32rem] bg-gradient-to-b from-primary/20 via-fuchsia-500/10 to-transparent blur-2xl" />
         <div className="mx-auto max-w-7xl px-6 py-16 sm:py-24 md:py-28 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs text-muted-foreground bg-secondary/50">
-            <Sparkles className="size-3.5 text-primary" />
-            RAG-powered answers from your own docs
-          </div>
-          <h1 className="mt-6 text-4xl sm:text-5xl md:text-6xl font-bold leading-tight">
-            Your personal
-            <span className="bg-gradient-to-r from-primary via-fuchsia-600 to-indigo-600 bg-clip-text text-transparent">
-              {' '}
-              knowledge‑base chatbot
-            </span>
-          </h1>
-          <p className="mt-4 text-muted-foreground text-base sm:text-lg max-w-2xl mx-auto">
-            Upload PDFs, notes, and articles, then chat with an AI that cites
-            the most relevant passages using vector search.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link href="/signup">
-              <Button size="lg" className="shadow-3xl">
-                Start for free
-                <Rocket className="size-4" />
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button size="lg" variant="outline">
-                Sign in
-                <LogIn className="size-4" />
-              </Button>
-            </Link>
+          <div className="max-w-3xl mx-auto flex flex-col items-center">
+            <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs text-muted-foreground bg-secondary/50">
+              <Sparkles className="size-3.5 text-primary" />
+              RAG-powered answers from your own docs
+            </div>
+            <h1 className="mt-6 text-4xl sm:text-5xl md:text-6xl font-bold leading-tight tracking-tight">
+              Your personal
+              <span className="bg-gradient-to-r from-primary via-fuchsia-600 to-indigo-600 bg-clip-text text-transparent block sm:inline">
+                {' '}
+                knowledge‑base chatbot
+              </span>
+            </h1>
+            <p className="mt-6 text-muted-foreground text-base sm:text-lg max-w-2xl">
+              Upload PDFs, notes, and articles, then chat with an AI that cites
+              the most relevant passages using vector search.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <Link href="/signup">
+                <Button size="lg" className="shadow-3xl">
+                  Start for free
+                  <Rocket className="size-4" />
+                </Button>
+              </Link>
+              <Link href="/login">
+                <Button size="lg" variant="outline">
+                  Sign in
+                  <LogIn className="size-4" />
+                </Button>
+              </Link>
+            </div>
           </div>
 
-          {/* Inline SVG preview to avoid images */}
-          <div className="mt-12 relative mx-auto max-w-5xl rounded-xl border bg-card/60 p-4 backdrop-blur">
-            <svg
-              role="img"
-              aria-label="Product preview"
-              viewBox="0 0 800 460"
-              className="w-full h-auto rounded-lg shadow-3xl"
-            >
-              <rect
-                x="4"
-                y="4"
-                width="792"
-                height="452"
-                rx="14"
-                fill="currentColor"
-                className="text-secondary/40"
-              />
-              <rect
-                x="40"
-                y="40"
-                width="720"
-                height="380"
-                rx="28"
-                fill="currentColor"
-                className="text-secondary/70"
-              />
-              <circle
-                cx="120"
-                cy="110"
-                r="14"
-                fill="currentColor"
-                className="text-primary"
-              />
-              <circle
-                cx="170"
-                cy="110"
-                r="14"
-                fill="currentColor"
-                className="text-primary"
-              />
-              <circle
-                cx="220"
-                cy="110"
-                r="14"
-                fill="currentColor"
-                className="text-primary"
-              />
-              <rect
-                x="80"
-                y="180"
-                width="640"
-                height="22"
-                rx="6"
-                fill="currentColor"
-                className="text-foreground/70"
-              />
-              <rect
-                x="80"
-                y="220"
-                width="560"
-                height="14"
-                rx="5"
-                fill="currentColor"
-                className="text-muted-foreground/60"
-              />
-              <rect
-                x="80"
-                y="244"
-                width="600"
-                height="14"
-                rx="5"
-                fill="currentColor"
-                className="text-muted-foreground/50"
-              />
-              <rect
-                x="80"
-                y="268"
-                width="520"
-                height="14"
-                rx="5"
-                fill="currentColor"
-                className="text-muted-foreground/40"
-              />
-            </svg>
+          {/* Product preview image */}
+          <div className="mt-12 relative mx-auto max-w-5xl rounded-xl border bg-card/60 p-4 backdrop-blur transition-all duration-300 hover:shadow-primary/5 hover:scale-[1.01]">
+            <Image
+              src="/chat.png"
+              alt="Product preview showing the Trove workspace with Postgres + pgvector, Embeddings, and LLM answers"
+              width={1918}
+              height={944}
+              priority
+              className="w-full h-auto rounded-lg shadow-2xl border"
+            />
           </div>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
             <span className="rounded-full border px-2.5 py-1">
