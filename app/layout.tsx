@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Trove | Knowledge Base',
-  description: 'A comprehensive knowledge base for all your needs',
+  title: 'Trove | Personal Assistant',
+  description: 'Your AI-powered personal assistant',
 };
 
 export default function RootLayout({
