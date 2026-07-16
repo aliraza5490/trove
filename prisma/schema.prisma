@@ -38,12 +38,27 @@ model Chat {
 }
 
 model Message {
-  id        String   @id @default(uuid())
-  chatId    String
-  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  role      String   // "user" | "assistant"
-  content   String
-  createdAt DateTime @default(now())
+  id          String       @id @default(uuid())
+  chatId      String
+  chat        Chat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  role        String       // "user" | "assistant"
+  content     String
+  attachments Attachment[]
+  createdAt   DateTime     @default(now())
 
   @@index([chatId])
+}
+
+model Attachment {
+  id        String   @id @default(uuid())
+  name      String
+  url       String
+  googleUri String?
+  mimeType  String?
+  size      Int?
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
 }

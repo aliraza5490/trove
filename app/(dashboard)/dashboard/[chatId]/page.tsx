@@ -18,6 +18,9 @@ export default async function ChatPage({ params }: { params: Promise<{ chatId: s
     include: {
       messages: {
         orderBy: { createdAt: 'asc' },
+        include: {
+          attachments: true,
+        },
       },
     },
   });
@@ -31,6 +34,14 @@ export default async function ChatPage({ params }: { params: Promise<{ chatId: s
     id: m.id,
     role: m.role as "user" | "assistant",
     content: m.content,
+    attachments: m.attachments.map((a) => ({
+      id: a.id,
+      name: a.name,
+      url: a.url,
+      googleUri: a.googleUri,
+      mimeType: a.mimeType,
+      size: a.size,
+    })),
   }));
 
   return <ChatClient chatId={chatId} initialMessages={initialMessages} key={chatId} />;

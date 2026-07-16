@@ -1,6 +1,10 @@
 export interface FileAttachment {
   name: string;
   content: string;
+  url?: string;
+  googleUri?: string | null;
+  mimeType?: string;
+  size?: number;
 }
 
 export interface AgentMessage {

@@ -18,10 +18,20 @@ import { Paperclip, Send, Upload, Image as ImageIcon, FileText, Wrench, X } from
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+type Attachment = {
+  id: string;
+  name: string;
+  url: string;
+  googleUri?: string | null;
+  mimeType?: string | null;
+  size?: number | null;
+};
+
 type Message = {
   id: string;
   role: "user" | "assistant";
   content: string;
+  attachments?: Attachment[];
 };
 
 type SelectedDoc = {
@@ -29,7 +39,10 @@ type SelectedDoc = {
   name: string;
   size: number;
   type: string;
+  url: string;
+  googleUri?: string | null;
   content: string;
+  isUploading: boolean;
 };
 
 function useAutoResizeTextarea<T extends HTMLTextAreaElement>() {
@@ -107,6 +120,11 @@ export default function ChatClient({ chatId, initialMessages = [] }: ChatClientP
   const [isStreaming, setIsStreaming] = useState(false);
   const [selectedDocs, setSelectedDocs] = useState<SelectedDoc[]>([]);
 
+  const isAnyFileUploading = useMemo(
+    () => selectedDocs.some((d) => d.isUploading),
+    [selectedDocs]
+  );
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("webSearch");
@@ -137,17 +155,33 @@ export default function ChatClient({ chatId, initialMessages = [] }: ChatClientP
   }, [messages, isStreaming]);
 
   const handleSend = useCallback(async () => {
-    if (!input.trim() || isStreaming) return;
+    if (!input.trim() || isStreaming || isAnyFileUploading) return;
     const text = input.trim();
     setInput("");
     
     const attachments = selectedDocs.map(d => ({
       name: d.name,
-      content: d.content
+      content: d.content,
+      url: d.url,
+      googleUri: d.googleUri,
+      mimeType: d.type,
+      size: d.size
     }));
     setSelectedDocs([]);
 
-    const userMsg: Message = { id: crypto.randomUUID(), role: "user", content: text };
+    const userMsg: Message = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: text,
+      attachments: attachments.map((att, idx) => ({
+        id: `att-local-${idx}-${Date.now()}`,
+        name: att.name,
+        url: att.url || "",
+        googleUri: att.googleUri,
+        mimeType: att.mimeType,
+        size: att.size
+      }))
+    };
     setMessages((prev) => [...prev, userMsg]);
 
     const assistantId = crypto.randomUUID();
@@ -208,50 +242,88 @@ export default function ChatClient({ chatId, initialMessages = [] }: ChatClientP
     } finally {
       setIsStreaming(false);
     }
-  }, [input, isStreaming, chatId, webSearch, selectedDocs, router]);
+  }, [input, isStreaming, isAnyFileUploading, chatId, webSearch, selectedDocs, router]);
 
   const handleUploadClick = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
 
-  const onFileSelected = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
+  const uploadFiles = useCallback((files: File[]) => {
     if (files.length) {
       files.forEach((file) => {
+        const docId = crypto.randomUUID();
+        // 1. Add placeholder with isUploading: true
+        setSelectedDocs((prev) => {
+          if (prev.some((d) => d.name === file.name && d.size === file.size)) return prev;
+          return [...prev, {
+            id: docId,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            url: "",
+            content: "",
+            isUploading: true
+          }];
+        });
+
+        // 2. Read content locally if it is a text file
         const reader = new FileReader();
         reader.onload = (event) => {
           const content = event.target?.result as string;
-          setSelectedDocs((prev) => {
-            if (prev.some((d) => d.name === file.name && d.size === file.size)) return prev;
-            toast.success(`Attached ${file.name}`);
-            return [...prev, {
-              id: crypto.randomUUID(),
-              name: file.name,
-              size: file.size,
-              type: file.type,
-              content: content || ""
-            }];
-          });
+          setSelectedDocs((prev) =>
+            prev.map((d) => (d.id === docId ? { ...d, content: content || "" } : d))
+          );
         };
+
         if (file.type.startsWith("text/") || file.name.endsWith(".md") || file.name.endsWith(".json") || file.name.endsWith(".csv") || file.name.endsWith(".txt")) {
           reader.readAsText(file);
         } else {
-          setSelectedDocs((prev) => {
-            if (prev.some((d) => d.name === file.name && d.size === file.size)) return prev;
-            toast.success(`Attached metadata for binary file: ${file.name}`);
-            return [...prev, {
-              id: crypto.randomUUID(),
-              name: file.name,
-              size: file.size,
-              type: file.type,
-              content: `[Binary/Non-text File content omitted: ${file.name}]`
-            }];
-          });
+          setSelectedDocs((prev) =>
+            prev.map((d) =>
+              d.id === docId
+                ? { ...d, content: `[Binary/Non-text File content omitted: ${file.name}]` }
+                : d
+            )
+          );
         }
+
+        // 3. Perform upload
+        const formData = new FormData();
+        formData.append("file", file);
+
+        fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error("Upload failed");
+            return res.json();
+          })
+          .then((data) => {
+            setSelectedDocs((prev) =>
+              prev.map((d) =>
+                d.id === docId
+                  ? { ...d, url: data.url, googleUri: data.googleUri, isUploading: false }
+                  : d
+              )
+            );
+            toast.success(`Uploaded ${file.name}`);
+          })
+          .catch((err) => {
+            console.error("File upload error:", err);
+            toast.error(`Failed to upload ${file.name}`);
+            // Remove failed doc from selection
+            setSelectedDocs((prev) => prev.filter((d) => d.id !== docId));
+          });
       });
     }
-    e.currentTarget.value = "";
   }, []);
+
+  const onFileSelected = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    uploadFiles(files);
+    e.currentTarget.value = "";
+  }, [uploadFiles]);
 
   const removeSelectedDoc = useCallback((id: string) => {
     setSelectedDocs((prev) => prev.filter((d) => d.id !== id));
@@ -304,6 +376,8 @@ export default function ChatClient({ chatId, initialMessages = [] }: ChatClientP
             onUploadClick={handleUploadClick}
             selectedDocs={selectedDocs}
             onRemoveDoc={removeSelectedDoc}
+            isAnyFileUploading={isAnyFileUploading}
+            onPasteFiles={uploadFiles}
           />
         </div>
       </div>
@@ -345,13 +419,37 @@ function Composer(props: {
   onUploadClick: () => void;
   selectedDocs: SelectedDoc[];
   onRemoveDoc: (id: string) => void;
+  isAnyFileUploading: boolean;
+  onPasteFiles: (files: File[]) => void;
 }) {
-  const { textareaRef, input, setInput, onSend, placeholder, isStreaming, webSearch, setWebSearch, onUploadClick, selectedDocs, onRemoveDoc } = props;
+  const {
+    textareaRef,
+    input,
+    setInput,
+    onSend,
+    placeholder,
+    isStreaming,
+    webSearch,
+    setWebSearch,
+    onUploadClick,
+    selectedDocs,
+    onRemoveDoc,
+    isAnyFileUploading,
+    onPasteFiles,
+  } = props;
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       onSend();
+    }
+  };
+
+  const onPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const files = Array.from(e.clipboardData.files);
+    if (files.length > 0) {
+      e.preventDefault();
+      onPasteFiles(files);
     }
   };
 
@@ -371,13 +469,19 @@ function Composer(props: {
   return (
     <div className="bg-background/80 supports-[backdrop-filter]:backdrop-blur-md border shadow-lg rounded-xl p-2 sm:p-3">
       {selectedDocs.length > 0 && (
-        <div className="flex overflow-x-auto items-center gap-2 px-1 pb-2">
+        <div className="flex overflow-x-auto items-center gap-2 px-1 pb-2 font-sans">
           {selectedDocs.map((d) => (
             <div
               key={d.id}
               className="group inline-flex items-center gap-2 rounded-full bg-accent/60 text-xs text-foreground px-2.5 py-1.5 border"
             >
-              <span className="text-muted-foreground">{iconFor(d.type)}</span>
+              <span className="text-muted-foreground flex items-center justify-center">
+                {d.isUploading ? (
+                  <span className="animate-spin inline-block size-3.5 border-2 border-primary border-t-transparent rounded-full" />
+                ) : (
+                  iconFor(d.type)
+                )}
+              </span>
               <span className="max-w-[14rem] truncate" title={`${d.name} • ${formatBytes(d.size)}`}>
                 {d.name}
               </span>
@@ -400,6 +504,7 @@ function Composer(props: {
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={onKeyDown}
+        onPaste={onPaste}
         placeholder={placeholder}
         className="max-h-32 min-h-14 w-full resize-none border-0 bg-transparent px-2 py-1.5 text-base shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-0 md:text-sm"
         aria-label="Chat input"
@@ -411,13 +516,14 @@ function Composer(props: {
             type="button"
             aria-label="Attach"
             onClick={onUploadClick}
-            className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-md hover:bg-accent"
+            disabled={isStreaming}
+            className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-md hover:bg-accent disabled:opacity-50 disabled:pointer-events-none"
           >
             <Paperclip className="size-5" />
           </button>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0">
+            <DropdownMenuTrigger asChild disabled={isStreaming}>
+              <Button variant="outline" size="sm" className="shrink-0" disabled={isStreaming}>
                 <Wrench className="size-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -441,7 +547,7 @@ function Composer(props: {
 
         <Button
           onClick={onSend}
-          disabled={!input.trim() || isStreaming}
+          disabled={!input.trim() || isStreaming || isAnyFileUploading}
           size="icon"
           className="shrink-0 rounded-lg"
         >
@@ -467,7 +573,7 @@ function MessageList({ messages }: { messages: Message[] }) {
       <ul className="space-y-6">
         {messages.map((m) => (
           <li key={m.id}>
-            <ChatBubble role={m.role} content={m.content} />
+            <ChatBubble role={m.role} content={m.content} attachments={m.attachments} />
           </li>
         ))}
       </ul>
@@ -475,7 +581,64 @@ function MessageList({ messages }: { messages: Message[] }) {
   );
 }
 
-function ChatBubble({ role, content }: { role: Message["role"]; content: string }) {
+function AttachmentPill({ attachment, isUser }: { attachment: Attachment; isUser: boolean }) {
+  const formatBytes = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    const kb = bytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(1)} KB`;
+    const mb = kb / 1024;
+    return `${mb.toFixed(1)} MB`;
+  };
+
+  const getFileIcon = (mime?: string | null, filename?: string) => {
+    const m = mime?.toLowerCase() || "";
+    const name = filename?.toLowerCase() || "";
+    
+    if (m.startsWith("image/") || name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".gif")) {
+      return <ImageIcon className="size-4 shrink-0 text-sky-500" />;
+    }
+    if (m.includes("pdf") || name.endsWith(".pdf")) {
+      return <FileText className="size-4 shrink-0 text-rose-500" />;
+    }
+    if (m.includes("csv") || m.includes("spreadsheet") || name.endsWith(".csv") || name.endsWith(".xlsx") || name.endsWith(".xls")) {
+      return <FileText className="size-4 shrink-0 text-emerald-500" />;
+    }
+    if (m.includes("json") || name.endsWith(".json")) {
+      return <FileText className="size-4 shrink-0 text-amber-500" />;
+    }
+    return <FileText className="size-4 shrink-0 text-muted-foreground" />;
+  };
+
+  const baseClasses = cn(
+    "flex items-center gap-2 rounded-lg border p-2 text-xs transition-all duration-200 max-w-[200px] sm:max-w-[240px] font-sans",
+    isUser
+      ? "bg-black/15 border-white/20 text-primary-foreground hover:bg-black/25"
+      : "bg-background border-border text-foreground hover:bg-accent"
+  );
+
+  return (
+    <a
+      href={attachment.url}
+      download={attachment.name}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={baseClasses}
+      title={`Download ${attachment.name}`}
+    >
+      {getFileIcon(attachment.mimeType, attachment.name)}
+      <div className="overflow-hidden min-w-0 flex-1">
+        <p className="truncate font-medium hover:underline">{attachment.name}</p>
+        {attachment.size && (
+          <p className={cn("text-[10px]", isUser ? "text-primary-foreground/75" : "text-muted-foreground")}>
+            {formatBytes(attachment.size)}
+          </p>
+        )}
+      </div>
+    </a>
+  );
+}
+
+function ChatBubble({ role, content, attachments }: { role: Message["role"]; content: string; attachments?: Attachment[] }) {
   const isUser = role === "user";
   return (
     <div className={cn("flex w-full items-start gap-3", isUser ? "justify-end" : "justify-start")}>
@@ -486,7 +649,7 @@ function ChatBubble({ role, content }: { role: Message["role"]; content: string 
       )}
       <div
         className={cn(
-          "max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm",
+          "max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm flex flex-col gap-2",
           isUser
             ? "bg-primary text-primary-foreground rounded-br-md"
             : "bg-muted text-foreground rounded-bl-md"
@@ -494,6 +657,12 @@ function ChatBubble({ role, content }: { role: Message["role"]; content: string 
       >
         {isUser ? (
           <div className="whitespace-pre-wrap">{content}</div>
+        ) : content === "" ? (
+          <div className="flex items-center gap-1.5 py-1.5 px-0.5" aria-label="Thinking">
+            <span className="size-1.5 rounded-full bg-foreground/45 animate-bounce [animation-delay:-0.3s]" />
+            <span className="size-1.5 rounded-full bg-foreground/45 animate-bounce [animation-delay:-0.15s]" />
+            <span className="size-1.5 rounded-full bg-foreground/45 animate-bounce" />
+          </div>
         ) : (
           <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed
               [&_a]:text-primary-600 [&_a]:underline hover:[&_a]:text-primary-500
@@ -514,6 +683,14 @@ function ChatBubble({ role, content }: { role: Message["role"]; content: string 
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {content}
             </ReactMarkdown>
+          </div>
+        )}
+
+        {attachments && attachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-1">
+            {attachments.map((att) => (
+              <AttachmentPill key={att.id} attachment={att} isUser={isUser} />
+            ))}
           </div>
         )}
       </div>

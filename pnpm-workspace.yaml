@@ -1,9 +1,11 @@
 allowBuilds:
+  '@google/genai': true
   '@prisma/client': true
   '@prisma/engines': true
   '@tailwindcss/oxide': true
   esbuild: true
   prisma: true
+  protobufjs: true
   sharp: true
 onlyBuiltDependencies:
   - '@prisma/client'
@@ -20,4 +22,3 @@ overrides:
 peerDependencyRules:
   allowedVersions:
     next: "16.2.10"
-

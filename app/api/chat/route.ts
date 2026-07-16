@@ -44,11 +44,21 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Save user message to database
+    const validAttachments = (attachments || []).filter((att: any) => att.url);
     await prisma.message.create({
       data: {
         chatId: finalChatId,
         role: 'user',
         content: message,
+        attachments: {
+          create: validAttachments.map((att: any) => ({
+            name: att.name,
+            url: att.url,
+            googleUri: att.googleUri || null,
+            mimeType: att.mimeType || null,
+            size: att.size || null,
+          })),
+        },
       },
     });
 

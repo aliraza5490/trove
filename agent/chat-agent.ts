@@ -4,6 +4,8 @@ import { ModelProvider } from './model-provider';
 import { executeWebSearch } from './tools/web-search';
 import { formatAttachments } from './tools/file-attachment';
 import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages';
+import { GoogleGenAI } from '@google/genai';
+import path from 'path';
 
 export class ChatAgent extends BaseAgent {
   readonly id = 'chat';
@@ -13,6 +15,11 @@ export class ChatAgent extends BaseAgent {
   async run(input: AgentInput): Promise<void> {
     const { message, history, webSearch, attachments, onToken, onComplete } = input;
 
+    // Get LLM model first to determine if we are using Google
+    const model = ModelProvider.getModel();
+    const googleApiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+    const isGoogle = !!(googleApiKey && model && model.constructor.name === 'ChatGoogleGenerativeAI');
+
     // 1. Gather contexts
     let searchContext = "";
     if (webSearch) {
@@ -20,8 +27,55 @@ export class ChatAgent extends BaseAgent {
     }
 
     let attachmentsContext = "";
-    if (attachments && attachments.length > 0) {
+    if (attachments && attachments.length > 0 && !isGoogle) {
       attachmentsContext = formatAttachments(attachments);
+    }
+
+    const googleFiles: Array<{ uri: string; mimeType: string }> = [];
+    if (isGoogle && attachments && attachments.length > 0) {
+      try {
+        const ai = new GoogleGenAI({ apiKey: googleApiKey });
+        for (const att of attachments) {
+          if (att.googleUri) {
+            console.log(`Using pre-uploaded Google file URI for ${att.name}: ${att.googleUri}`);
+            googleFiles.push({
+              uri: att.googleUri,
+              mimeType: att.mimeType || 'application/octet-stream',
+            });
+          } else if (att.url) {
+            const absolutePath = path.join(process.cwd(), 'public', att.url.replace(/^\//, ''));
+            console.log(`Uploading file to Google servers (fallback): ${absolutePath}`);
+            const uploadResult = await ai.files.upload({
+              file: absolutePath,
+              config: {
+                mimeType: att.mimeType || undefined,
+              },
+            });
+
+            if (!uploadResult.name) {
+              throw new Error(`Upload of ${att.name} did not return a file name`);
+            }
+            let fileState = await ai.files.get({ name: uploadResult.name });
+            while (fileState.state === 'PROCESSING') {
+              console.log(`File ${att.name} is processing, waiting 2s...`);
+              await new Promise((resolve) => setTimeout(resolve, 2000));
+              fileState = await ai.files.get({ name: uploadResult.name });
+            }
+
+            if (!uploadResult.uri) {
+              throw new Error(`Upload of ${att.name} did not return a URI`);
+            }
+            console.log(`File ${att.name} uploaded successfully to Google servers. URI: ${uploadResult.uri}`);
+            googleFiles.push({
+              uri: uploadResult.uri,
+              mimeType: att.mimeType || 'application/octet-stream',
+            });
+          }
+        }
+      } catch (uploadError) {
+        console.error("Google files upload failed, falling back to text prompt injection:", uploadError);
+        attachmentsContext = formatAttachments(attachments);
+      }
     }
 
     // 2. Assemble LangChain messages
@@ -39,16 +93,30 @@ export class ChatAgent extends BaseAgent {
     formattedMessages.push(new SystemMessage(systemInstruction));
 
     // Convert history into messages (including user's latest message, which is already saved and retrieved at the end of history)
-    history.forEach((m) => {
+    history.forEach((m, idx) => {
       if (m.role === 'user') {
-        formattedMessages.push(new HumanMessage(m.content));
+        if (idx === history.length - 1 && googleFiles.length > 0) {
+          formattedMessages.push(
+            new HumanMessage({
+              content: [
+                { type: 'text', text: m.content },
+                ...googleFiles.map((f) => ({
+                  type: 'file',
+                  url: f.uri,
+                  mimeType: f.mimeType,
+                })),
+              ],
+            })
+          );
+        } else {
+          formattedMessages.push(new HumanMessage(m.content));
+        }
       } else {
         formattedMessages.push(new AIMessage(m.content));
       }
     });
 
     // 3. Get LLM model
-    const model = ModelProvider.getModel();
 
     let completeText = "";
 
