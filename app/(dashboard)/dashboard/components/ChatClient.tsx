@@ -107,6 +107,22 @@ export default function ChatClient({ chatId, initialMessages = [] }: ChatClientP
   const [isStreaming, setIsStreaming] = useState(false);
   const [selectedDocs, setSelectedDocs] = useState<SelectedDoc[]>([]);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("webSearch");
+      if (saved !== null) {
+        setWebSearch(saved === "true");
+      }
+    }
+  }, []);
+
+  const handleSetWebSearch = useCallback((value: boolean) => {
+    setWebSearch(value);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("webSearch", String(value));
+    }
+  }, []);
+
   const inConversation = messages.length > 0;
 
   const { ref: textareaRef, resize } = useAutoResizeTextarea<HTMLTextAreaElement>();
@@ -284,7 +300,7 @@ export default function ChatClient({ chatId, initialMessages = [] }: ChatClientP
             placeholder={placeholder}
             isStreaming={isStreaming}
             webSearch={webSearch}
-            setWebSearch={setWebSearch}
+            setWebSearch={handleSetWebSearch}
             onUploadClick={handleUploadClick}
             selectedDocs={selectedDocs}
             onRemoveDoc={removeSelectedDoc}
