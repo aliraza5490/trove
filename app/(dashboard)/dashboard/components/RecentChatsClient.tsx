@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { renameChat as renameChatAction, deleteChat as deleteChatAction } from './actions';
 import { Pencil, Trash2, Check, X, MoreVertical } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import {
   SidebarMenuItem,
   SidebarMenuButton,
@@ -89,10 +90,11 @@ export default function RecentChatsClient({ initialChats }: { initialChats: Chat
     <>
       {chats.map((c) => {
         const isEditing = editingId === c.id;
+        const isActive = pathname === `/dashboard/${c.id}`;
         return (
           <SidebarMenuItem key={c.id}>
             {isEditing ? (
-              <div className="flex items-center gap-2 rounded-md p-2">
+              <div className="flex items-center gap-2 rounded-lg p-2 h-13">
                 <Input
                   value={draftTitle}
                   onChange={(e) => setDraftTitle(e.target.value)}
@@ -101,29 +103,38 @@ export default function RecentChatsClient({ initialChats }: { initialChats: Chat
                     if (e.key === 'Escape') cancelEdit();
                   }}
                   aria-label="Chat title"
-                  className="h-8"
+                  className="h-8 text-sm"
                   autoFocus
                 />
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => saveEdit(c.id)}>
+                <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => saveEdit(c.id)}>
                   <Check className="h-4 w-4" />
                   <span className="sr-only">Save</span>
                 </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={cancelEdit}>
+                <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={cancelEdit}>
                   <X className="h-4 w-4" />
                   <span className="sr-only">Cancel</span>
                 </Button>
               </div>
             ) : (
               <>
-                <SidebarMenuButton asChild>
-                  <Link href={`/dashboard/${c.id}`}>
-                    <span className="line-clamp-1 flex-1">{c.title}</span>
-                    <span className="text-muted-foreground text-xs shrink-0">{c.updatedAt}</span>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive}
+                  className={cn(
+                    "h-13 pl-3 pr-9! rounded-lg transition-all duration-150 ease-in-out flex items-center justify-between gap-1.5 group/row min-w-0",
+                    "hover:bg-sidebar-accent/70 dark:hover:bg-white/[0.06]",
+                    "active:scale-[0.985] active:bg-sidebar-accent/80",
+                    isActive && "bg-sidebar-accent/90 text-sidebar-accent-foreground font-semibold shadow-2xs border-l-2 border-primary pl-2.5"
+                  )}
+                >
+                  <Link href={`/dashboard/${c.id}`} className="flex min-w-0 w-full items-center justify-between gap-1.5">
+                    <span className="truncate min-w-0 flex-1 text-sm font-medium">{c.title}</span>
+                    <span className="text-[11px] font-normal text-muted-foreground/60 shrink-0 text-right tracking-tight pl-1">{c.updatedAt}</span>
                   </Link>
                 </SidebarMenuButton>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <SidebarMenuAction aria-label="More actions" showOnHover>
+                    <SidebarMenuAction aria-label="More actions" showOnHover className="right-1.5">
                       <MoreVertical className="h-4 w-4" />
                     </SidebarMenuAction>
                   </DropdownMenuTrigger>
