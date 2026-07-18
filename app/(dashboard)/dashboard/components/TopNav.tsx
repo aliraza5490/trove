@@ -26,8 +26,7 @@ export function TopNav() {
         <button
           type="button"
           onClick={() => {
-            const evt = new KeyboardEvent("keydown", { key: "k", metaKey: true });
-            document.dispatchEvent(evt);
+            window.dispatchEvent(new CustomEvent("open-command-menu"));
           }}
           className="hidden md:flex items-center gap-2 h-8 px-2.5 text-xs text-muted-foreground bg-accent/40 hover:bg-accent border border-border/50 rounded-lg transition-all hover:text-foreground cursor-pointer shadow-2xs"
         >

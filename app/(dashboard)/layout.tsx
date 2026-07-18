@@ -22,6 +22,7 @@ import Logo from "@/components/logo";
 import { redirect } from "next/navigation";
 
 import { TopNav } from '@/app/(dashboard)/dashboard/components/TopNav';
+import { CommandMenu } from '@/components/command-menu';
 
 export default async function DashboardLayout({
   children,
@@ -68,6 +69,7 @@ export default async function DashboardLayout({
         <TopNav />
         <div className="min-h-[calc(100dvh-3.25rem)]">{children}</div>
       </SidebarInset>
+      <CommandMenu />
     </SidebarProvider>
   );
 }
