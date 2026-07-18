@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import { BackgroundRippleEffect } from '@/components/ui/background-ripple-effect';
+import { LandingHeader } from '@/components/landing-header';
 import {
   Card,
   CardHeader,
@@ -24,62 +26,31 @@ import {
 export default async function Home() {
   return (
     <main className="min-h-[100dvh] flex flex-col overflow-x-hidden">
-      {/* Header */}
-      <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <Bot aria-hidden className="size-6 text-primary" />
-            <span className="font-semibold">Trove</span>
-          </Link>
-          <nav
-            aria-label="Primary"
-            className="flex flex-wrap items-center gap-2 sm:gap-3"
-          >
-            <Link
-              href="#features"
-              className="hidden sm:inline text-sm text-muted-foreground hover:text-foreground"
-            >
-              Features
-            </Link>
-            <Link
-              href="#how-it-works"
-              className="hidden sm:inline text-sm text-muted-foreground hover:text-foreground"
-            >
-              How it works
-            </Link>
-            <Link href="/login" className="hidden sm:inline-flex">
-              <Button variant="ghost">Sign in</Button>
-            </Link>
-            <Link href="/signup">
-              <Button size="lg">
-                Get started
-                <ArrowRight className="size-4" />
-              </Button>
-            </Link>
-          </nav>
-        </div>
-      </header>
+      {/* Fixed Landing Navigation at root of main */}
+      <LandingHeader />
 
-      {/* Hero */}
-      <section className="relative overflow-hidden" aria-label="Hero">
-        {/* Stable, low-risk gradient background */}
-        <div className="absolute inset-x-0 top-0 -z-10 h-[32rem] bg-gradient-to-b from-primary/20 via-fuchsia-500/10 to-transparent blur-2xl" />
-        <div className="mx-auto max-w-7xl px-6 py-16 sm:py-24 md:py-28 text-center">
+      {/* Hero Section with Background Ripple Effect behind header */}
+      <section className="relative w-full overflow-hidden pt-20 sm:pt-24 md:pt-28 pb-16 sm:pb-24" aria-label="Hero">
+        {/* Background Ripple Effect covering entire hero area including navigation bar */}
+        <BackgroundRippleEffect rows={14} cols={35} />
+        {/* Gradient glow overlay */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[38rem] bg-gradient-to-b from-primary/10 via-fuchsia-500/5 to-transparent blur-2xl" />
+
+        {/* Hero Content */}
+        <div className="relative z-10 mx-auto max-w-7xl px-6 text-center">
           <div className="max-w-3xl mx-auto flex flex-col items-center">
-            <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs text-muted-foreground bg-secondary/50">
+            <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs text-muted-foreground bg-secondary/50 backdrop-blur">
               <Sparkles className="size-3.5 text-primary" />
-              RAG-powered answers from your own docs
+              Meet your personal AI assistant
             </div>
-            <h1 className="mt-6 text-4xl sm:text-5xl md:text-6xl font-bold leading-tight tracking-tight">
-              Your personal
-              <span className="bg-gradient-to-r from-primary via-fuchsia-600 to-indigo-600 bg-clip-text text-transparent block sm:inline">
-                {' '}
-                knowledge‑base chatbot
+            <h1 className="relative z-10 mx-auto mt-6 max-w-4xl text-center text-4xl font-bold leading-tight tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+              Your personal <br />
+              <span className="bg-gradient-to-r from-primary via-fuchsia-600 to-indigo-600 bg-clip-text text-transparent">
+                AI assistant
               </span>
             </h1>
-            <p className="mt-6 text-muted-foreground text-base sm:text-lg max-w-2xl">
-              Upload PDFs, notes, and articles, then chat with an AI that cites
-              the most relevant passages using vector search.
+            <p className="relative z-10 mx-auto mt-4 max-w-xl text-center text-muted-foreground text-base sm:text-lg">
+              Upload PDFs, notes, and articles. Ask questions and get instant, accurate answers with direct source citations from your personal knowledge base.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link href="/signup">

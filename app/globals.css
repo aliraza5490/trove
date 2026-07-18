@@ -46,6 +46,30 @@
   }
 }
 
+@keyframes cell-ripple {
+  0% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+}
+
+.animate-cell-ripple {
+  animation: cell-ripple var(--duration, 600ms) ease-in-out var(--delay, 0ms);
+}
+
+.mask-radial-at-top {
+  mask-image: radial-gradient(circle at top, black 30%, transparent 85%);
+  -webkit-mask-image: radial-gradient(circle at top, black 30%, transparent 85%);
+}
+
 .animate-fade-in {
   animation: fade-in 0.8s ease-out forwards;
 }
