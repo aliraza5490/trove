@@ -14,7 +14,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Paperclip, Send, Upload, Image as ImageIcon, FileText, Wrench, Bot, Sparkles, X } from "lucide-react";
+import {
+  Paperclip,
+  Send,
+  Upload,
+  Image as ImageIcon,
+  FileText,
+  Wrench,
+  Bot,
+  Sparkles,
+  X,
+  Globe,
+  Code2,
+  Lightbulb,
+  Compass,
+  ArrowUpRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -44,6 +59,37 @@ type SelectedDoc = {
   content: string;
   isUploading: boolean;
 };
+
+const SUGGESTED_PROMPTS = [
+  {
+    icon: Globe,
+    title: "Web Research",
+    subtitle: "Search real-time news & updates",
+    prompt: "What are the latest tech trends and web framework updates in 2026?",
+    color: "text-blue-500 bg-blue-500/10 dark:bg-blue-500/20",
+  },
+  {
+    icon: FileText,
+    title: "Document Analysis",
+    subtitle: "Summarize & extract key insights",
+    prompt: "Help me analyze key takeaways and structure insights from my uploaded document.",
+    color: "text-amber-500 bg-amber-500/10 dark:bg-amber-500/20",
+  },
+  {
+    icon: Code2,
+    title: "Code & Debug",
+    subtitle: "Generate clean React & TS code",
+    prompt: "Write a custom React component with Tailwind CSS and smooth micro-interactions.",
+    color: "text-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/20",
+  },
+  {
+    icon: Lightbulb,
+    title: "Brainstorm Ideas",
+    subtitle: "Explore features & architecture",
+    prompt: "Give me 5 innovative feature ideas for an AI-powered workspace application.",
+    color: "text-purple-500 bg-purple-500/10 dark:bg-purple-500/20",
+  },
+];
 
 function useAutoResizeTextarea<T extends HTMLTextAreaElement>() {
   const ref = useRef<T>(null);
@@ -148,6 +194,16 @@ export default function ChatClient({ chatId, initialMessages = [] }: ChatClientP
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Auto focus input on mount when on new chat page
+  useEffect(() => {
+    if (!inConversation && textareaRef.current) {
+      const timer = setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [inConversation, textareaRef]);
 
   useEffect(() => {
     if (!scrollRef.current) return;
@@ -329,18 +385,131 @@ export default function ChatClient({ chatId, initialMessages = [] }: ChatClientP
     setSelectedDocs((prev) => prev.filter((d) => d.id !== id));
   }, []);
 
-  const placeholder = useMemo(
-    () => (webSearch ? "Ask anything... (Web Search ON)" : "Ask anything..."),
-    [webSearch]
+  const handleSelectSuggestedPrompt = useCallback(
+    (promptText: string) => {
+      setInput(promptText);
+      textareaRef.current?.focus();
+    },
+    [textareaRef]
   );
+
+  // Global key listener to auto-focus input on typing anywhere & handle Enter on new chat page
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isInputTarget =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable ||
+          target.closest('[role="dialog"]') ||
+          target.closest('[role="combobox"]'));
+
+      if (isInputTarget) return;
+
+      // Ignore modifier combinations (Ctrl+K, Cmd+C, etc.)
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      // Handle Enter key on new chat page / anywhere when not focusing an input
+      if (e.key === "Enter" && !e.shiftKey) {
+        if (input.trim() && !isStreaming && !isAnyFileUploading) {
+          e.preventDefault();
+          handleSend();
+        } else if (textareaRef.current) {
+          textareaRef.current.focus();
+        }
+        return;
+      }
+
+      // Auto-focus input on typing any printable character
+      if (e.key.length === 1 && textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [input, isStreaming, isAnyFileUploading, handleSend, textareaRef]);
+
+  const placeholder = "Ask anything...";
 
   return (
     <div className="relative min-h-full">
       <div className={cn("mx-auto w-full max-w-[800px]", inConversation ? "pt-4" : "")}>
         {!inConversation ? (
-          <div className="flex flex-col items-center justify-center min-h-[calc(60dvh)] pb-40">
-            <div className="w-full max-w-2xl px-4">
+          <div className="flex flex-col items-center justify-center min-h-[calc(82dvh)] py-6 px-2 sm:px-4">
+            <div className="w-full max-w-[800px] flex flex-col items-center">
               <HeroHeading />
+
+              <div className="w-full mt-6 mb-6">
+                <Composer
+                  textareaRef={textareaRef}
+                  input={input}
+                  setInput={setInput}
+                  onSend={handleSend}
+                  placeholder={placeholder}
+                  isStreaming={isStreaming}
+                  webSearch={webSearch}
+                  setWebSearch={handleSetWebSearch}
+                  onUploadClick={handleUploadClick}
+                  selectedDocs={selectedDocs}
+                  onRemoveDoc={removeSelectedDoc}
+                  isAnyFileUploading={isAnyFileUploading}
+                  onPasteFiles={uploadFiles}
+                />
+              </div>
+
+              {/* Suggested Prompts & Engagement Section */}
+              <div className="w-full space-y-3">
+                <div className="flex items-center justify-between px-1 text-xs text-muted-foreground font-medium">
+                  <span className="flex items-center gap-1.5">
+                    <Compass className="size-3.5 text-primary" />
+                    Suggested Prompts
+                  </span>
+                  <span className="text-[11px] text-muted-foreground/70">Click to fill</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {SUGGESTED_PROMPTS.map((item) => (
+                    <button
+                      key={item.title}
+                      type="button"
+                      onClick={() => handleSelectSuggestedPrompt(item.prompt)}
+                      className="flex items-start gap-3 p-3.5 rounded-xl border border-border/60 bg-card/40 hover:bg-accent/60 hover:border-border/80 transition-all duration-200 text-left group shadow-2xs hover:shadow-xs cursor-pointer"
+                    >
+                      <div className={cn("p-2 rounded-lg shrink-0 transition-transform group-hover:scale-105", item.color)}>
+                        <item.icon className="size-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors flex items-center justify-between">
+                          <span>{item.title}</span>
+                          <ArrowUpRight className="size-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                          {item.subtitle}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Keyboard Shortcuts Footer */}
+                <div className="pt-4 flex flex-wrap items-center justify-center gap-4 text-[11px] text-muted-foreground/80">
+                  <div className="flex items-center gap-1.5">
+                    <kbd className="px-1.5 py-0.5 font-mono text-[10px] font-semibold bg-muted/80 border border-border/60 rounded shadow-2xs">Ctrl + K</kbd>
+                    <span>Search chats</span>
+                  </div>
+                  <span>•</span>
+                  <div className="flex items-center gap-1.5">
+                    <kbd className="px-1.5 py-0.5 font-mono text-[10px] font-semibold bg-muted/80 border border-border/60 rounded shadow-2xs">↵</kbd>
+                    <span>Send prompt</span>
+                  </div>
+                  <span>•</span>
+                  <div className="flex items-center gap-1.5">
+                    <kbd className="px-1.5 py-0.5 font-mono text-[10px] font-semibold bg-muted/80 border border-border/60 rounded shadow-2xs">Shift + ↵</kbd>
+                    <span>New line</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         ) : (
@@ -355,32 +524,27 @@ export default function ChatClient({ chatId, initialMessages = [] }: ChatClientP
         )}
       </div>
 
-      <div
-        className={cn(
-          "pointer-events-none absolute inset-x-0 transition-all duration-500 ease-in-out w-full flex justify-center",
-          inConversation
-            ? "bottom-5 translate-y-0"
-            : "top-1/2 -translate-y-1/2"
-        )}
-      >
-        <div className="pointer-events-auto w-full max-w-[800px] px-2 sm:px-4">
-          <Composer
-            textareaRef={textareaRef}
-            input={input}
-            setInput={setInput}
-            onSend={handleSend}
-            placeholder={placeholder}
-            isStreaming={isStreaming}
-            webSearch={webSearch}
-            setWebSearch={handleSetWebSearch}
-            onUploadClick={handleUploadClick}
-            selectedDocs={selectedDocs}
-            onRemoveDoc={removeSelectedDoc}
-            isAnyFileUploading={isAnyFileUploading}
-            onPasteFiles={uploadFiles}
-          />
+      {inConversation && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-5 transition-all duration-500 ease-in-out w-full flex justify-center">
+          <div className="pointer-events-auto w-full max-w-[800px] px-2 sm:px-4">
+            <Composer
+              textareaRef={textareaRef}
+              input={input}
+              setInput={setInput}
+              onSend={handleSend}
+              placeholder={placeholder}
+              isStreaming={isStreaming}
+              webSearch={webSearch}
+              setWebSearch={handleSetWebSearch}
+              onUploadClick={handleUploadClick}
+              selectedDocs={selectedDocs}
+              onRemoveDoc={removeSelectedDoc}
+              isAnyFileUploading={isAnyFileUploading}
+              onPasteFiles={uploadFiles}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       <input
         ref={fileInputRef}
@@ -397,11 +561,15 @@ export default function ChatClient({ chatId, initialMessages = [] }: ChatClientP
 function HeroHeading() {
   return (
     <div className="mx-auto text-center">
-      <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground/90">
-        Welcome to your chat
+      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-medium mb-3.5 shadow-2xs">
+        <Sparkles className="size-3.5 text-primary" />
+        <span>Trove AI Workspace</span>
+      </div>
+      <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground/90">
+        What can I help you build today?
       </h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Ask questions, analyze docs, and explore the web.
+      <p className="mt-2.5 text-sm sm:text-base text-muted-foreground max-w-md mx-auto">
+        Research the web, analyze documents, write code, or brainstorm ideas.
       </p>
     </div>
   );
@@ -467,7 +635,7 @@ function Composer(props: {
   };
 
   return (
-    <div className="bg-background/85 supports-[backdrop-filter]:backdrop-blur-md border border-border/70 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] rounded-xl p-2 sm:p-3 transition-shadow">
+    <div className="bg-background/85 supports-[backdrop-filter]:backdrop-blur-md border border-border/70 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] rounded-xl p-2.5 sm:p-3.5 transition-shadow">
       {selectedDocs.length > 0 && (
         <div className="flex overflow-x-auto items-center gap-2 px-1 pb-2 font-sans">
           {selectedDocs.map((d) => (
@@ -501,6 +669,7 @@ function Composer(props: {
 
       <Textarea
         ref={textareaRef}
+        autoFocus
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={onKeyDown}
@@ -518,31 +687,46 @@ function Composer(props: {
             onClick={onUploadClick}
             disabled={isStreaming}
             className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-md hover:bg-accent disabled:opacity-50 disabled:pointer-events-none"
+            title="Attach document"
           >
-            <Paperclip className="size-5" />
+            <Paperclip className="size-4.5" />
           </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild disabled={isStreaming}>
-              <Button variant="outline" size="sm" className="shrink-0" disabled={isStreaming}>
-                <Wrench className="size-4" />
+              <Button variant="outline" size="sm" className="shrink-0 gap-1 text-xs" disabled={isStreaming}>
+                <Wrench className="size-3.5" />
+                <span className="hidden sm:inline">Tools</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuItem  onSelect={(e) => { e.preventDefault(); onUploadClick(); }}>
-                <Upload className="size-4" /> Upload Document
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onUploadClick(); }}>
+                <Upload className="size-4 mr-2" /> Upload Document
               </DropdownMenuItem>
               <DropdownMenuCheckboxItem
                 checked={webSearch}
                 onCheckedChange={(v) => setWebSearch(Boolean(v))}
               >
-                {webSearch ? <>
-                  <span className="text-sm">Disable Web Search</span>
-                </> : <>
-                  <span className="text-sm">Enable Web Search</span>
-                </>}
+                {webSearch ? "Disable Web Search" : "Enable Web Search"}
               </DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Web Search Mode Pill */}
+          <button
+            type="button"
+            onClick={() => setWebSearch(!webSearch)}
+            disabled={isStreaming}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-200 border cursor-pointer select-none",
+              webSearch
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 shadow-2xs"
+                : "bg-muted/50 text-muted-foreground hover:text-foreground border-border/40 hover:bg-accent"
+            )}
+            title={webSearch ? "Disable Web Search" : "Enable Web Search"}
+          >
+            <Globe className={cn("size-3.5", webSearch && "text-emerald-500")} />
+            <span>{webSearch ? "Web Search ON" : "Web Search"}</span>
+          </button>
         </div>
 
         <Button
@@ -555,14 +739,16 @@ function Composer(props: {
           <span className="sr-only">Send</span>
         </Button>
       </div>
-      <div className="mt-2 text-[11px] text-muted-foreground flex items-center gap-2 px-1">
-        <span className="inline-flex items-center gap-1">
-          <span className={cn("inline-block size-2 rounded-full", webSearch ? "bg-emerald-500" : "bg-muted")}></span>
-          Web search {webSearch ? "enabled" : "disabled"}
-        </span>
-        <span>•</span>
-        <span>Press Enter to send, Shift+Enter for new line</span>
-      </div>
+
+      {webSearch && (
+        <div className="mt-2.5 pt-2 border-t border-border/40 flex items-center justify-between text-[11px] text-emerald-600 dark:text-emerald-400 font-medium px-1 animate-in fade-in duration-200">
+          <span className="inline-flex items-center gap-1.5">
+            <Globe className="size-3 text-emerald-500" />
+            🌐 Web Search Enabled
+          </span>
+          <span className="text-muted-foreground font-normal">Press Enter to send</span>
+        </div>
+      )}
     </div>
   );
 }
