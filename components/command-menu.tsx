@@ -6,12 +6,9 @@ import { useTheme } from "next-themes";
 import {
   IconMessage,
   IconPlus,
-  IconDeviceDesktop,
   IconSun,
   IconMoon,
   IconArrowRight,
-  IconSearch,
-  IconSparkles,
 } from "@tabler/icons-react";
 import {
   Command,
@@ -109,14 +106,12 @@ export function CommandMenu() {
         showCloseButton={false}
       >
         <Command className="flex h-full w-full flex-col overflow-hidden bg-popover">
-          <div className="flex h-12 items-center gap-2 border-b border-border/50 px-4">
-            <IconSearch className="size-4 shrink-0 text-muted-foreground/70" />
-            <CommandInput
-              className="h-10 text-[15px]"
-              onValueChange={setInputValue}
-              placeholder="Search chats or commands..."
-              value={inputValue}
-            />
+          <CommandInput
+            className="h-12 text-[15px]"
+            onValueChange={setInputValue}
+            placeholder="Search chats or commands..."
+            value={inputValue}
+          >
             <button
               className="flex shrink-0 items-center cursor-pointer hover:opacity-80 transition-opacity"
               onClick={() => setOpen(false)}
@@ -125,7 +120,7 @@ export function CommandMenu() {
             >
               <Kbd>Esc</Kbd>
             </button>
-          </div>
+          </CommandInput>
 
           <CommandList className="max-h-[400px] py-2">
             <CommandEmpty className="py-8 text-center text-sm text-muted-foreground">
