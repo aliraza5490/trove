@@ -1,7 +1,7 @@
 import { auth } from '@/auth';
 import prisma from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
-import { agentRegistry } from '@/agent';
+import { agentRegistry, generateChatTitle } from '@/agent';
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,8 +23,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Create chat if not exists
     if (!finalChatId) {
-      chatTitle = message.substring(0, 35);
-      if (message.length > 35) chatTitle += "...";
+      chatTitle = await generateChatTitle(message);
       
       const newChat = await prisma.chat.create({
         data: {
@@ -96,6 +95,21 @@ export async function POST(req: NextRequest) {
                   content: completeText,
                 },
               });
+
+              // Refine title with assistant response if chat was just created
+              if (!chatId) {
+                try {
+                  const refinedTitle = await generateChatTitle(message, completeText);
+                  if (refinedTitle && refinedTitle !== chatTitle) {
+                    await prisma.chat.update({
+                      where: { id: finalChatId },
+                      data: { title: refinedTitle },
+                    });
+                  }
+                } catch (tErr) {
+                  console.error("Title refinement error:", tErr);
+                }
+              }
 
               // Update chat's updatedAt field
               await prisma.chat.update({

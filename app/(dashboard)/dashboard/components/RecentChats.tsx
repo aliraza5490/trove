@@ -1,6 +1,7 @@
 import { auth } from '@/auth';
 import prisma from '@/lib/db';
 import RecentChatsClient from "./RecentChatsClient";
+import { generateChatTitle } from '@/agent';
 
 type Chat = {
   id: string;
@@ -34,13 +35,44 @@ export default async function RecentChats() {
   const dbChats = await prisma.chat.findMany({
     where: { userId },
     orderBy: { updatedAt: 'desc' },
+    include: {
+      messages: {
+        take: 1,
+        orderBy: { createdAt: 'asc' },
+      },
+    },
   });
 
-  const chats: Chat[] = dbChats.map(chat => ({
-    id: chat.id,
-    title: chat.title,
-    updatedAt: formatRelativeTime(chat.updatedAt),
-  }));
+  const chats: Chat[] = await Promise.all(
+    dbChats.map(async (chat) => {
+      let currentTitle = chat.title;
+
+      // Auto-upgrade old truncated titles (ending with "...") or plain "if else"
+      if (currentTitle.endsWith('...') || currentTitle.toLowerCase() === 'if else') {
+        const firstUserMessage = chat.messages[0]?.content;
+        if (firstUserMessage) {
+          try {
+            const upgradedTitle = await generateChatTitle(firstUserMessage);
+            if (upgradedTitle && upgradedTitle !== currentTitle) {
+              currentTitle = upgradedTitle;
+              prisma.chat.update({
+                where: { id: chat.id },
+                data: { title: upgradedTitle },
+              }).catch((err) => console.error('Failed to update chat title in DB:', err));
+            }
+          } catch (err) {
+            console.error('Failed to auto-upgrade title:', err);
+          }
+        }
+      }
+
+      return {
+        id: chat.id,
+        title: currentTitle,
+        updatedAt: formatRelativeTime(chat.updatedAt),
+      };
+    })
+  );
 
   if (!chats.length) {
     return (

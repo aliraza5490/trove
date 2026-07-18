@@ -6,21 +6,12 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Paperclip,
   Send,
-  Upload,
   Image as ImageIcon,
   FileText,
-  Wrench,
   Bot,
   Sparkles,
   X,
@@ -691,25 +682,6 @@ function Composer(props: {
           >
             <Paperclip className="size-4.5" />
           </button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild disabled={isStreaming}>
-              <Button variant="outline" size="sm" className="shrink-0 gap-1 text-xs" disabled={isStreaming}>
-                <Wrench className="size-3.5" />
-                <span className="hidden sm:inline">Tools</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onUploadClick(); }}>
-                <Upload className="size-4 mr-2" /> Upload Document
-              </DropdownMenuItem>
-              <DropdownMenuCheckboxItem
-                checked={webSearch}
-                onCheckedChange={(v) => setWebSearch(Boolean(v))}
-              >
-                {webSearch ? "Disable Web Search" : "Enable Web Search"}
-              </DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
 
           {/* Web Search Mode Pill */}
           <button
