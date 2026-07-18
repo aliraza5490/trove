@@ -121,10 +121,10 @@ export default function RecentChatsClient({ initialChats }: { initialChats: Chat
                   asChild
                   isActive={isActive}
                   className={cn(
-                    "h-13 pl-3 pr-9! rounded-lg transition-all duration-150 ease-in-out flex items-center justify-between gap-1.5 group/row min-w-0",
+                    "h-11 pl-2.5 pr-8! rounded-lg transition-all duration-150 ease-in-out flex items-center justify-between gap-1.5 group/row min-w-0",
                     "hover:bg-sidebar-accent/70 dark:hover:bg-white/[0.06]",
                     "active:scale-[0.985] active:bg-sidebar-accent/80",
-                    isActive && "bg-sidebar-accent/90 text-sidebar-accent-foreground font-semibold shadow-2xs border-l-2 border-primary pl-2.5"
+                    isActive && "bg-sidebar-accent/90 text-sidebar-accent-foreground font-semibold shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.25)] border-l-2 border-primary pl-2"
                   )}
                 >
                   <Link href={`/dashboard/${c.id}`} className="flex min-w-0 w-full items-center justify-between gap-1.5">

@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Paperclip, Send, Upload, Image as ImageIcon, FileText, Wrench, X } from "lucide-react";
+import { Paperclip, Send, Upload, Image as ImageIcon, FileText, Wrench, Bot, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -336,7 +336,7 @@ export default function ChatClient({ chatId, initialMessages = [] }: ChatClientP
 
   return (
     <div className="relative min-h-full">
-      <div className={cn("mx-auto w-full max-w-3xl", inConversation ? "pt-4" : "")}>
+      <div className={cn("mx-auto w-full max-w-[800px]", inConversation ? "pt-4" : "")}>
         {!inConversation ? (
           <div className="flex flex-col items-center justify-center min-h-[calc(60dvh)] pb-40">
             <div className="w-full max-w-2xl px-4">
@@ -363,7 +363,7 @@ export default function ChatClient({ chatId, initialMessages = [] }: ChatClientP
             : "top-1/2 -translate-y-1/2"
         )}
       >
-        <div className="pointer-events-auto w-full max-w-3xl px-2 sm:px-4">
+        <div className="pointer-events-auto w-full max-w-[800px] px-2 sm:px-4">
           <Composer
             textareaRef={textareaRef}
             input={input}
@@ -467,7 +467,7 @@ function Composer(props: {
   };
 
   return (
-    <div className="bg-background/80 supports-[backdrop-filter]:backdrop-blur-md border shadow-lg rounded-xl p-2 sm:p-3">
+    <div className="bg-background/85 supports-[backdrop-filter]:backdrop-blur-md border border-border/70 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] rounded-xl p-2 sm:p-3 transition-shadow">
       {selectedDocs.length > 0 && (
         <div className="flex overflow-x-auto items-center gap-2 px-1 pb-2 font-sans">
           {selectedDocs.map((d) => (
@@ -569,7 +569,7 @@ function Composer(props: {
 
 function MessageList({ messages }: { messages: Message[] }) {
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <div className="mx-auto w-full max-w-[800px]">
       <ul className="space-y-6">
         {messages.map((m) => (
           <li key={m.id}>
@@ -643,16 +643,18 @@ function ChatBubble({ role, content, attachments }: { role: Message["role"]; con
   return (
     <div className={cn("flex w-full items-start gap-3", isUser ? "justify-end" : "justify-start")}>
       {!isUser && (
-        <Avatar>
-          <AvatarFallback>AI</AvatarFallback>
+        <Avatar className="size-8 border border-emerald-500/20 shadow-2xs ring-1 ring-background shrink-0">
+          <AvatarFallback className="bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 text-white font-medium flex items-center justify-center size-full">
+            <Bot className="size-4 text-white" />
+          </AvatarFallback>
         </Avatar>
       )}
       <div
         className={cn(
-          "max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm flex flex-col gap-2",
+          "max-w-[80%] sm:max-w-[78%] rounded-2xl px-4 py-3 text-sm flex flex-col gap-2 transition-all",
           isUser
-            ? "bg-primary text-primary-foreground rounded-br-md"
-            : "bg-muted text-foreground rounded-bl-md"
+            ? "bg-primary text-primary-foreground rounded-br-md shadow-[0_2px_10px_rgba(99,102,241,0.18)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.3)]"
+            : "bg-muted/65 dark:bg-zinc-900/80 border border-border/60 dark:border-white/[0.06] text-foreground rounded-bl-md shadow-[0_2px_10px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
         )}
       >
         {isUser ? (
@@ -695,8 +697,10 @@ function ChatBubble({ role, content, attachments }: { role: Message["role"]; con
         )}
       </div>
       {isUser && (
-        <Avatar>
-          <AvatarFallback>U</AvatarFallback>
+        <Avatar className="size-8 border border-white/20 shadow-2xs ring-1 ring-background shrink-0">
+          <AvatarFallback className="bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 text-white font-semibold text-xs flex items-center justify-center size-full">
+            U
+          </AvatarFallback>
         </Avatar>
       )}
     </div>

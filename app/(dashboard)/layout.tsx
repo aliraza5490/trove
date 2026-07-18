@@ -21,6 +21,8 @@ import { auth } from '@/auth';
 import Logo from "@/components/logo";
 import { redirect } from "next/navigation";
 
+import { TopNav } from '@/app/(dashboard)/dashboard/components/TopNav';
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -63,14 +65,8 @@ export default async function DashboardLayout({
       </Sidebar>
 
       <SidebarInset>
-        <div className="flex h-12 items-center gap-2 border-b px-3">
-          <SidebarTrigger />
-          <div className="text-sm text-muted-foreground">Dashboard</div>
-          <div className="ml-auto flex items-center gap-2">
-            <ThemeToggle />
-          </div>
-        </div>
-        <div className="min-h-[calc(100dvh-3rem)]">{children}</div>
+        <TopNav />
+        <div className="min-h-[calc(100dvh-3.25rem)]">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );
